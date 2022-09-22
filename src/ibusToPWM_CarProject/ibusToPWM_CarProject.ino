@@ -1,8 +1,7 @@
-
 #include <string.h>
 #include <Servo.h>
 #define IBUS_BUFFSIZE  32
-#define IBUS_MAXCHANNELS 5                                                  // we are going to use 4 channels //(ibus protocol suports up to 14 channels // 
+#define IBUS_MAXCHANNELS 6                                                  // we are going to use 4 channels //(ibus protocol suports up to 14 channels // 
 #define PIN_SERVO_CAMERA 4
 #define PIN_ESC 5
 #define PIN_SERVO_DIRECTION 6
@@ -19,8 +18,7 @@ int ch_width_1;
 int ch_width_2;
 int ch_width_3;
 int ch_width_4;
-int ch_width_4_new;
-
+int ch_width_5;
 
 
 
@@ -40,33 +38,40 @@ void setup(){
 
 void loop() {
   
-      if(Serial.available()){
       readData(); 
-      fromArduinoPWM(); 
-      }                                                  
-}                                                                        
+      fromArduinoPWM();
+      fakeFailsafe();                                               
+}                                                                          
                                                                         
-
+void fakeFailsafe(){                                            // failsaife ^^ //
+     
+      if(ch_width_5 > 1300){
+         while(ch_width_5 > 1300){
+           servoDirection.write(1500);
+           servoCamera.writeMicroseconds(1500);
+           ESC.writeMicroseconds(1000);
+           readData(); 
+        }
+       }
+       // testing //
+      
+}
 
 void fromArduinoPWM(){
+  
        ch_width_1 = map(rcController[0], 1000, 2000, 1000, 2000);          // We dont want our camera to rotate more than 90 degrees
        servoCamera.writeMicroseconds(ch_width_1);                         
        ch_width_2 = map(rcController[1], 1000,2000,1000,2000);
        ESC.writeMicroseconds(ch_width_2);
        ch_width_3 = map(rcController[3], 1000, 2000, 0, 180);
        servoDirection.write(ch_width_3); 
-        ch_width_4 = map(rcController[4], 1000, 2000, 1000, 2000);
-       if((ch_width_4 > 1600 ) && (ch_width_4 != ch_width_4_new)){                                              // adding logic for reverce rotation switch because
-        digitalWrite(PIN_RELAY_BACKWORDS_1, LOW);                          // we are using one directional ESC
-        ch_width_4_new = ch_width_4;
-        ESC.writeMicroseconds(1000);
-        delay (300);
+       ch_width_4 = map(rcController[4], 1000, 2000, 1000, 2000);
+        
+       if(ch_width_4 > 1600 ){                                              // adding logic for reverce rotation switch because
+        digitalWrite(PIN_RELAY_BACKWORDS_1, LOW);                           // we are using one directional ESC
        }
-       else if((ch_width_4 < 1600 ) && (ch_width_4 != ch_width_4_new)){
-        digitalWrite(PIN_RELAY_BACKWORDS_1, HIGH);
-        ch_width_4_new = ch_width_4; 
-        ESC.writeMicroseconds(1000);     
-        delay (300);   
+       else if (ch_width_4 < 1400){
+        digitalWrite(PIN_RELAY_BACKWORDS_1, HIGH);     
        }
 }
 
@@ -87,6 +92,9 @@ void readData(){
         high+=2;
         low +=2;
         }
+        // fake fs 
+        ch_width_5 = map (rcController[5], 1000, 2000, 1000, 2000);
+        //        
         ibusIndex  = true;                                                 // Whole packed is readed adn we are done 
         return;
       }
